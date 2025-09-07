@@ -19,7 +19,7 @@ export const Logo: React.FC<IconSvgProps> = ({
       d="M6 4C4.89543 4 4 4.89543 4 6V26C4 27.1046 4.89543 28 6 28H26C27.1046 28 28 27.1046 28 26V6C28 4.89543 27.1046 4 26 4H6ZM8 8H24V24H8V8ZM10 10V22H12V10H10ZM14 10V22H16V10H14ZM18 10V22H20V10H18ZM22 10V22H22V10Z"
       fill="currentColor"
     />
-    <circle cx="16" cy="6" r="1.5" fill="currentColor"/>
+    <circle cx="16" cy="6" r="1.5" fill="currentColor" />
   </svg>
 );
 

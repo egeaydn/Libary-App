@@ -12,7 +12,9 @@ export default function OpenLibraryBooks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [selectedBook, setSelectedBook] = useState<OpenLibraryBook | null>(null);
+  const [selectedBook, setSelectedBook] = useState<OpenLibraryBook | null>(
+    null,
+  );
 
   useEffect(() => {
     fetch("https://openlibrary.org/people/mekBot/books/want-to-read.json")
@@ -24,7 +26,7 @@ export default function OpenLibraryBooks() {
               title: entry.work.title,
               author_name: entry.work.author_names,
               first_publish_year: entry.work.first_publish_year,
-            }))
+            })),
           );
         }
         setLoading(false);
@@ -35,15 +37,22 @@ export default function OpenLibraryBooks() {
       });
   }, []);
 
-  const filteredBooks = books.filter((book) =>
-    book.title.toLowerCase().includes(search.toLowerCase()) ||
-    (book.author_name && book.author_name.join(", ").toLowerCase().includes(search.toLowerCase()))
+  const filteredBooks = books.filter(
+    (book) =>
+      book.title.toLowerCase().includes(search.toLowerCase()) ||
+      (book.author_name &&
+        book.author_name
+          .join(", ")
+          .toLowerCase()
+          .includes(search.toLowerCase())),
   );
 
   return (
     <div className="w-full max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8 text-center">OpenLibrary - Okumak İstenilen Kitaplar</h1>
-      
+      <h1 className="text-3xl font-bold mb-8 text-center">
+        OpenLibrary - Okumak İstenilen Kitaplar
+      </h1>
+
       <div className="flex justify-center mb-8">
         <input
           type="text"
@@ -56,7 +65,7 @@ export default function OpenLibraryBooks() {
 
       {loading && <p className="text-center">Yükleniyor...</p>}
       {error && <p className="text-red-500 text-center">{error}</p>}
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {filteredBooks.map((book, i) => (
           <button
@@ -72,13 +81,17 @@ export default function OpenLibraryBooks() {
               {book.title}
             </h2>
             <p className="text-gray-700 dark:text-gray-200 mb-1">
-              <span className="font-semibold">Yazar:</span> {book.author_name ? book.author_name.join(", ") : "Bilinmiyor"}
+              <span className="font-semibold">Yazar:</span>{" "}
+              {book.author_name ? book.author_name.join(", ") : "Bilinmiyor"}
             </p>
             <p className="text-gray-500 dark:text-gray-400 mb-2">
-              <span className="font-semibold">İlk Yayın Yılı:</span> {book.first_publish_year || "Bilinmiyor"}
+              <span className="font-semibold">İlk Yayın Yılı:</span>{" "}
+              {book.first_publish_year || "Bilinmiyor"}
             </p>
             <div className="absolute bottom-2 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <span className="inline-block px-3 py-1 bg-violet-600 text-white text-xs rounded-full shadow-lg animate-bounce">Detay</span>
+              <span className="inline-block px-3 py-1 bg-violet-600 text-white text-xs rounded-full shadow-lg animate-bounce">
+                Detay
+              </span>
             </div>
           </button>
         ))}
@@ -95,23 +108,25 @@ export default function OpenLibraryBooks() {
             >
               ×
             </button>
-            <h2 className="text-2xl font-bold mb-2 text-violet-700 dark:text-violet-300">{selectedBook.title}</h2>
-            <p className="mb-1"><span className="font-semibold">Yazar:</span> {selectedBook.author_name ? selectedBook.author_name.join(", ") : "Bilinmiyor"}</p>
-            <p className="mb-1"><span className="font-semibold">İlk Yayın Yılı:</span> {selectedBook.first_publish_year || "Bilinmiyor"}</p>
-            <p className="mt-4 text-gray-500 dark:text-gray-300">Daha fazla bilgi için OpenLibrary sitesini ziyaret edebilirsiniz.</p>
+            <h2 className="text-2xl font-bold mb-2 text-violet-700 dark:text-violet-300">
+              {selectedBook.title}
+            </h2>
+            <p className="mb-1">
+              <span className="font-semibold">Yazar:</span>{" "}
+              {selectedBook.author_name
+                ? selectedBook.author_name.join(", ")
+                : "Bilinmiyor"}
+            </p>
+            <p className="mb-1">
+              <span className="font-semibold">İlk Yayın Yılı:</span>{" "}
+              {selectedBook.first_publish_year || "Bilinmiyor"}
+            </p>
+            <p className="mt-4 text-gray-500 dark:text-gray-300">
+              Daha fazla bilgi için OpenLibrary sitesini ziyaret edebilirsiniz.
+            </p>
           </div>
         </div>
       )}
-
-      <style jsx global>{`
-        @keyframes fade-in {
-          0% { opacity: 0; transform: translateY(30px) scale(0.95); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.7s cubic-bezier(0.4,0,0.2,1) both;
-        }
-      `}</style>
     </div>
   );
 }
