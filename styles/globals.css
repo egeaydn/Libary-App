@@ -1,29 +1,3 @@
 @import "tailwindcss";
 
-html,
-body {
-  min-height: 100vh;
-  background: linear-gradient(
-    135deg,
-    #ede9fe 0%,
-    #f0f9ff 50%,
-    #e0e7ff 100%
-  );
-  color: #111;
-  font-family: var(--font-sans, sans-serif);
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
+@config "../tailwind.config.js";
