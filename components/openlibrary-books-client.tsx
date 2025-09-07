@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
 type OpenLibraryBook = {
   title: string;
@@ -7,43 +7,22 @@ type OpenLibraryBook = {
   first_publish_year?: number;
 };
 
-export default function OpenLibraryBooks() {
-  const [books, setBooks] = useState<OpenLibraryBook[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+type Props = {
+  books: OpenLibraryBook[];
+};
+
+export default function OpenLibraryBooksClient({ books }: Props) {
   const [search, setSearch] = useState("");
-  const [selectedBook, setSelectedBook] = useState<OpenLibraryBook | null>(null);
-
-  useEffect(() => {
-    fetch("https://openlibrary.org/people/mekBot/books/want-to-read.json")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.reading_log_entries) {
-          setBooks(
-            data.reading_log_entries.map((entry: any) => ({
-              title: entry.work.title,
-              author_name: entry.work.author_names,
-              first_publish_year: entry.work.first_publish_year,
-            }))
-          );
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError("Kitaplar alınamadı.");
-        setLoading(false);
-      });
-  }, []);
-
   const filteredBooks = books.filter((book) =>
     book.title.toLowerCase().includes(search.toLowerCase()) ||
     (book.author_name && book.author_name.join(", ").toLowerCase().includes(search.toLowerCase()))
   );
 
+  const [selectedBook, setSelectedBook] = useState<OpenLibraryBook | null>(null);
+
   return (
     <div className="w-full max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-8 text-center">OpenLibrary - Okumak İstenilen Kitaplar</h1>
-      
       <div className="flex justify-center mb-8">
         <input
           type="text"
@@ -53,10 +32,6 @@ export default function OpenLibraryBooks() {
           className="w-full max-w-md px-4 py-2 border border-violet-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-violet-400 dark:bg-gray-900 dark:text-white"
         />
       </div>
-
-      {loading && <p className="text-center">Yükleniyor...</p>}
-      {error && <p className="text-red-500 text-center">{error}</p>}
-      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {filteredBooks.map((book, i) => (
           <button
@@ -83,7 +58,6 @@ export default function OpenLibraryBooks() {
           </button>
         ))}
       </div>
-
       {/* Modal */}
       {selectedBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -102,7 +76,6 @@ export default function OpenLibraryBooks() {
           </div>
         </div>
       )}
-
       <style jsx global>{`
         @keyframes fade-in {
           0% { opacity: 0; transform: translateY(30px) scale(0.95); }
