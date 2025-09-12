@@ -1,4 +1,4 @@
-import OpenLibraryBooks from "../components/openlibrary-books";
+import OpenLibraryBooks from "../components/openlibrary-books-enhanced";
 
 export default function Home() {
   return (

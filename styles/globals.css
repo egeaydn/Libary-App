@@ -1,3 +1,66 @@
 @import "tailwindcss";
 
-@config "../tailwind.config.js";
+html,
+body {
+  min-height: 100vh;
+  background: linear-gradient(
+    135deg,
+    #ede9fe 0%,
+    #f0f9ff 50%,
+    #e0e7ff 100%
+  );
+  color: #111;
+  font-family: var(--font-sans, sans-serif);
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+/* Image placeholder fallback */
+.book-cover-fallback {
+  background: linear-gradient(135deg, #f3e8ff 0%, #dbeafe 100%);
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
