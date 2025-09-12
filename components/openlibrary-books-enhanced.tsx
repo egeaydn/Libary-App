@@ -1,105 +1,95 @@
 "use client";
-import React, { useEffect, useState } from "react";
 
-type OpenLibraryBook = {
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+interface OpenLibraryBook {
   title: string;
   author_name?: string[];
   first_publish_year?: number;
-  subject?: string[];
-  isbn?: string[];
   cover_i?: number;
-};
+  isbn?: string[];
+  subject?: string[];
+  publisher?: string[];
+  language?: string[];
+  key: string;
+}
 
-export default function OpenLibraryBooks() {
+interface OpenLibraryResponse {
+  docs: OpenLibraryBook[];
+  numFound: number;
+}
+
+export default function OpenLibraryBooksEnhanced() {
   const [books, setBooks] = useState<OpenLibraryBook[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("title");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBook, setSelectedBook] = useState<OpenLibraryBook | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<"title" | "year" | "author">("title");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
+  // LocalStorage'dan favorileri yükle
   useEffect(() => {
-    fetch("https://openlibrary.org/people/mekBot/books/want-to-read.json")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.reading_log_entries) {
-          setBooks(
-            data.reading_log_entries.map((entry: any) => ({
-              title: entry.work.title,
-              author_name: entry.work.author_names,
-              first_publish_year: entry.work.first_publish_year,
-              subject: entry.work.subject,
-              isbn: entry.work.isbn,
-              cover_i: entry.work.cover_id,
-            })),
-          );
-        }
-        setLoading(false);
-      })
-      .catch((_err) => {
-        setError("Kitaplar alınamadı.");
-        setLoading(false);
-      });
+    const savedFavorites = localStorage.getItem("library-favorites");
+    if (savedFavorites) {
+      setFavorites(JSON.parse(savedFavorites));
+    }
   }, []);
 
-  // Tüm kategorileri çıkar
-  const getAllCategories = () => {
-    const categories = new Set<string>();
-    books.forEach((book) => {
-      if (book.subject && book.subject.length > 0) {
-        book.subject.forEach((subj) => {
-          // Kategoriyi temizle ve normalize et
-          const cleanCategory = subj.trim().toLowerCase();
-          if (cleanCategory.length > 0 && cleanCategory.length < 30) {
-            categories.add(subj.trim());
-          }
-        });
-      }
-    });
-    return Array.from(categories).sort();
+  // Favorileri localStorage'a kaydet
+  const toggleFavorite = (title: string) => {
+    const newFavorites = favorites.includes(title)
+      ? favorites.filter(fav => fav !== title)
+      : [...favorites, title];
+    
+    setFavorites(newFavorites);
+    localStorage.setItem("library-favorites", JSON.stringify(newFavorites));
   };
 
+  // Tüm kategorileri al
+  const getAllCategories = () => {
+    const allSubjects = books.flatMap(book => book.subject || []);
+    const uniqueSubjects = Array.from(new Set(allSubjects))
+      .filter(subject => subject && subject.length > 2 && subject.length < 30)
+      .sort();
+    return uniqueSubjects.slice(0, 20); // İlk 20 kategori
+  };
+
+  // Kitapları filtrele ve sırala
   const filteredBooks = books
-    .filter((book) => {
-      // Arama filtresi
-      const searchMatch = 
-        book.title.toLowerCase().includes(search.toLowerCase()) ||
-        (book.author_name &&
-          book.author_name
-            .join(", ")
-            .toLowerCase()
-            .includes(search.toLowerCase()));
+    .filter(book => {
+      const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.author_name?.some(author => author.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      // Kategori filtresi
-      const categoryMatch = 
-        selectedCategory === "all" ||
-        (book.subject && book.subject.some(subj => subj.trim() === selectedCategory));
+      const matchesCategory = selectedCategory === "all" || 
+        book.subject?.some(subject => subject === selectedCategory);
       
-      return searchMatch && categoryMatch;
+      return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
+        case "title":
+          return a.title.localeCompare(b.title);
+        case "author":
+          const authorA = a.author_name?.[0] || "";
+          const authorB = b.author_name?.[0] || "";
+          return authorA.localeCompare(authorB);
         case "year":
           return (b.first_publish_year || 0) - (a.first_publish_year || 0);
-        case "author":
-          return (a.author_name?.[0] || "").localeCompare(
-            b.author_name?.[0] || "",
-          );
-        default:
+        case "favorites":
+          const aFav = favorites.includes(a.title);
+          const bFav = favorites.includes(b.title);
+          if (aFav && !bFav) return -1;
+          if (!aFav && bFav) return 1;
           return a.title.localeCompare(b.title);
+        default:
+          return 0;
       }
     });
 
-  const toggleFavorite = (title: string) => {
-    setFavorites((prev) =>
-      prev.includes(title)
-        ? prev.filter((fav) => fav !== title)
-        : [...prev, title],
-    );
-  };
-
+  // Kitap kapak URL'si oluştur
   const getCoverUrl = (book: OpenLibraryBook) => {
     if (book.cover_i) {
       return `https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`;
@@ -107,51 +97,183 @@ export default function OpenLibraryBooks() {
     return null;
   };
 
+  // OpenLibrary API'den kitap ara
+  const searchBooks = async (query: string = "javascript") => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await axios.get<OpenLibraryResponse>(
+        `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=50&fields=title,author_name,first_publish_year,cover_i,isbn,subject,publisher,language,key`
+      );
+      
+      if (response.data.docs.length === 0) {
+        setError("Hiç kitap bulunamadı. Farklı bir arama terimi deneyin.");
+      } else {
+        setBooks(response.data.docs);
+      }
+    } catch (err) {
+      setError("Kitaplar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.");
+      console.error("API Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sayfa yüklendiğinde varsayılan arama yap
+  useEffect(() => {
+    searchBooks();
+  }, []);
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent mb-4">
-          📚 Kitap Koleksiyonu
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Başlık */}
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent mb-2">
+          📚 Kütüphane Koleksiyonu
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 text-lg">
-          OpenLibrary'den seçkin kitapları keşfedin
+        <p className="text-gray-600 dark:text-gray-400">
+          OpenLibrary'den binlerce kitabı keşfedin
         </p>
       </div>
 
-      {/* Arama ve Filtreleme */}
-      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-2xl p-6 mb-8 shadow-lg border border-white/20">
-        <div className="flex flex-col md:flex-row gap-4">
+      {/* Arama ve Filtreler */}
+      <div className="mb-8 space-y-4">
+        {/* Arama Çubuğu */}
+        <div className="flex gap-4">
           <div className="flex-1">
             <input
-              className="w-full px-4 py-3 bg-white/50 dark:bg-gray-900/50 border border-violet-200 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all"
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Kitap adı veya yazar ara..."
               type="text"
-              value={search}
+              placeholder="Kitap adı, yazar adı ile arayın..."
+              className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <select
-            className="px-4 py-3 bg-white/50 dark:bg-gray-900/50 border border-violet-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400"
-            onChange={(e) => setSortBy(e.target.value as "title" | "year" | "author")}
-            value={sortBy}
+          <button
+            className="px-8 py-4 bg-gradient-to-r from-violet-500 to-blue-500 text-white rounded-xl hover:from-violet-600 hover:to-blue-600 transition-all font-medium shadow-lg hover:shadow-xl"
+            onClick={() => searchBooks(searchTerm || "javascript")}
+            disabled={loading}
           >
-            <option value="title">📖 İsme göre</option>
-            <option value="year">📅 Yıla göre</option>
-            <option value="author">✍️ Yazara göre</option>
-          </select>
+            {loading ? "🔍 Arıyor..." : "🔍 Ara"}
+          </button>
         </div>
+
+        {/* Sıralama ve Kategori Filtreleri */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Sıralama
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            >
+              <option value="title">Alfabetik (A-Z)</option>
+              <option value="author">Yazara Göre</option>
+              <option value="year">Yıla Göre (Yeni-Eski)</option>
+              <option value="favorites">Favoriler Önce</option>
+            </select>
+          </div>
+          
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Kategori
+            </label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            >
+              <option value="all">Tüm Kategoriler</option>
+              {getAllCategories().map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Aktif Filtreler */}
+        {(searchTerm || selectedCategory !== "all") && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Aktif filtreler:</span>
+            {searchTerm && (
+              <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                Arama: "{searchTerm}"
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+            {selectedCategory !== "all" && (
+              <span className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                Kategori: {selectedCategory}
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className="hover:bg-violet-200 dark:hover:bg-violet-800 rounded-full p-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-violet-600"></div>
+          <div className="text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Kitaplar yükleniyor...</p>
+          </div>
         </div>
       )}
 
+      {/* Error */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
           <p className="text-red-600 dark:text-red-400 text-lg">{error}</p>
+        </div>
+      )}
+
+      {/* Sonuç sayısı */}
+      {!loading && !error && books.length > 0 && (
+        <div className="flex justify-between items-center mb-6">
+          <div className="text-gray-600 dark:text-gray-400">
+            <span className="font-medium text-violet-600 dark:text-violet-400">
+              {filteredBooks.length}
+            </span>{" "}
+            {filteredBooks.length === 1 ? "kitap" : "kitap"} bulundu
+            {books.length !== filteredBooks.length && (
+              <span className="text-gray-500">
+                {" "}(toplam {books.length} kitaptan)
+              </span>
+            )}
+          </div>
+          
+          {/* Hızlı kategori butonları */}
+          <div className="hidden md:flex gap-2">
+            {getAllCategories().slice(0, 4).map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(selectedCategory === category ? "all" : category)}
+                className={`px-3 py-1 rounded-full text-xs transition-all ${
+                  selectedCategory === category
+                    ? "bg-violet-500 text-white"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-violet-100 dark:hover:bg-violet-900/30"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -164,15 +286,16 @@ export default function OpenLibraryBooks() {
           return (
             <div
               key={i}
-              className="group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-lg hover:shadow-2xl border border-white/20 dark:border-gray-700/50 overflow-hidden transform transition-all duration-300 hover:scale-105 hover:-translate-y-2 max-w-sm mx-auto"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-200 dark:border-gray-700 overflow-hidden group cursor-pointer flex flex-col h-full"
+              onClick={() => setSelectedBook(book)}
             >
               {/* Kitap Kapağı */}
-              <div className="relative h-56 bg-gradient-to-br from-violet-100 to-blue-100 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+              <div className="relative h-80 bg-gradient-to-br from-violet-100 to-blue-100 dark:from-gray-700 dark:to-gray-800 overflow-hidden flex-shrink-0">
                 {coverUrl ? (
                   <img
-                    alt={book.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     src={coverUrl}
+                    alt={book.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -181,7 +304,7 @@ export default function OpenLibraryBooks() {
                         parent.innerHTML = `
                           <div class="flex flex-col items-center justify-center h-full p-4">
                             <div class="text-4xl text-violet-400 mb-2">📚</div>
-                            <div class="text-xs text-center text-gray-600 dark:text-gray-400 line-clamp-2 font-medium">
+                            <div class="text-xs text-center text-gray-600 dark:text-gray-400 line-clamp-3 font-medium">
                               ${book.title}
                             </div>
                           </div>
@@ -192,7 +315,7 @@ export default function OpenLibraryBooks() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full p-4">
                     <div className="text-4xl text-violet-400 mb-2">📚</div>
-                    <div className="text-xs text-center text-gray-600 dark:text-gray-400 line-clamp-2 font-medium">
+                    <div className="text-xs text-center text-gray-600 dark:text-gray-400 line-clamp-3 font-medium">
                       {book.title}
                     </div>
                   </div>
@@ -200,11 +323,11 @@ export default function OpenLibraryBooks() {
                 
                 {/* Favori Butonu */}
                 <button
-                  className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-200 ${
-                    isFavorite
-                      ? "bg-red-500 text-white"
-                      : "bg-white/80 text-gray-600 hover:bg-red-500 hover:text-white"
-                  }`}
+                  className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-sm transition-all ${
+                    isFavorite 
+                      ? "bg-red-500/80 text-white" 
+                      : "bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-400"
+                  } hover:scale-110`}
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFavorite(book.title);
@@ -215,72 +338,96 @@ export default function OpenLibraryBooks() {
 
                 {/* Yıl Badge */}
                 {book.first_publish_year && (
-                  <div className="absolute top-3 left-3 bg-black/60 text-white px-2 py-1 rounded-full text-xs font-medium">
+                  <div className="absolute bottom-3 left-3 bg-violet-500/80 text-white px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm">
                     {book.first_publish_year}
                   </div>
                 )}
               </div>
 
               {/* Kitap Bilgileri */}
-              <div className="p-4">
-                <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2 line-clamp-2 leading-tight">
+              <div className="p-4 flex flex-col flex-grow">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2 mb-2 h-10 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors flex items-start">
                   {book.title}
                 </h3>
                 
-                <p className="text-violet-600 dark:text-violet-400 font-medium mb-2 line-clamp-1">
+                <p className="text-gray-600 dark:text-gray-400 text-xs line-clamp-1 mb-3 h-4">
                   {book.author_name ? book.author_name.join(", ") : "Bilinmeyen Yazar"}
                 </p>
 
-                {book.subject && book.subject.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {book.subject.slice(0, 2).map((subj, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full"
-                      >
-                        {subj}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {/* Konular */}
+                <div className="mb-3 h-6 flex flex-wrap gap-1">
+                  {book.subject && book.subject.length > 0 && (
+                    <>
+                      {book.subject.slice(0, 2).map((subject, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full text-xs h-6 flex items-center"
+                        >
+                          {subject.length > 12 ? subject.substring(0, 12) + "..." : subject}
+                        </span>
+                      ))}
+                    </>
+                  )}
+                </div>
 
-                {/* Detay Butonu */}
-                <button
-                  className="w-full mt-3 bg-gradient-to-r from-violet-500 to-blue-500 hover:from-violet-600 hover:to-blue-600 text-white py-2 px-4 rounded-xl font-medium transition-all duration-200 transform hover:scale-105"
-                  onClick={() => setSelectedBook(book)}
-                >
-                  📖 Detayları Gör
-                </button>
+                {/* Detay Butonu - flexbox ile en alta sabitlenir */}
+                <div className="mt-auto">
+                  <button className="w-full bg-gradient-to-r from-violet-500 to-blue-500 text-white py-2 px-4 rounded-lg text-sm font-medium hover:from-violet-600 hover:to-blue-600 transition-all transform hover:scale-105">
+                    📖 Detayları Gör
+                  </button>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {filteredBooks.length === 0 && !loading && !error && (
+      {/* Boş Durum */}
+      {!loading && !error && filteredBooks.length === 0 && books.length > 0 && (
         <div className="text-center py-20">
-          <div className="text-6xl mb-4">📚</div>
-          <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-            Hiçbir kitap bulunamadı
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-2">
+            Hiç kitap bulunamadı
           </h3>
-          <p className="text-gray-500 dark:text-gray-500">
-            Arama kriterlerinizi değiştirmeyi deneyin
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            Arama kriterlerinize uygun kitap bulunamadı.
           </p>
+          <div className="flex justify-center gap-3">
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Aramayı Temizle
+              </button>
+            )}
+            {selectedCategory !== "all" && (
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Kategori Filtresini Kaldır
+              </button>
+            )}
+          </div>
         </div>
       )}
 
       {/* Modal */}
       {selectedBook && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
-              onClick={() => setSelectedBook(null)}
-            >
-              ✕
-            </button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center rounded-t-2xl">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">📖 Kitap Detayları</h1>
+              <button
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                onClick={() => setSelectedBook(null)}
+              >
+                <span className="text-2xl">✕</span>
+              </button>
+            </div>
             
-            <div className="flex flex-col md:flex-row gap-6">
+            <div className="p-6 flex flex-col lg:flex-row gap-8">
               {/* Kitap Kapağı */}
               <div className="flex-shrink-0">
                 <div className="relative w-48 h-72 bg-gradient-to-br from-violet-100 to-blue-100 dark:from-gray-700 dark:to-gray-800 rounded-xl overflow-hidden shadow-xl">
