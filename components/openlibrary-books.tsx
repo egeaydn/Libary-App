@@ -31,7 +31,7 @@ export default function OpenLibraryBooks() {
         }
         setLoading(false);
       })
-      .catch((err) => {
+      .catch((_err) => {
         setError("Kitaplar alınamadı.");
         setLoading(false);
       });
@@ -55,11 +55,11 @@ export default function OpenLibraryBooks() {
 
       <div className="flex justify-center mb-8">
         <input
-          type="text"
+          className="w-full max-w-md px-4 py-2 border border-violet-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-violet-400 dark:bg-gray-900 dark:text-white"
           placeholder="Kitap adı veya yazar ara..."
+          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border border-violet-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-violet-400 dark:bg-gray-900 dark:text-white"
         />
       </div>
 
@@ -102,9 +102,9 @@ export default function OpenLibraryBooks() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-lg w-full relative animate-fade-in">
             <button
+              aria-label="Kapat"
               className="absolute top-2 right-2 text-gray-400 hover:text-violet-600 text-2xl"
               onClick={() => setSelectedBook(null)}
-              aria-label="Kapat"
             >
               ×
             </button>

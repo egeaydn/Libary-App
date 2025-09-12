@@ -22,7 +22,8 @@ export const Navbar = () => {
     <Input
       aria-label="Kitap ara"
       classNames={{
-        inputWrapper: "bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-violet-200/50 dark:border-gray-600/50 shadow-lg",
+        inputWrapper:
+          "bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-violet-200/50 dark:border-gray-600/50 shadow-lg",
         input: "text-sm placeholder:text-gray-500",
       }}
       labelPlacement="outside"
@@ -35,14 +36,17 @@ export const Navbar = () => {
   );
 
   return (
-    <HeroUINavbar 
-      className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-violet-200/30 dark:border-gray-700/50 shadow-lg" 
-      maxWidth="xl" 
+    <HeroUINavbar
+      className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-violet-200/30 dark:border-gray-700/50 shadow-lg"
+      maxWidth="xl"
       position="sticky"
     >
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
         <NavbarBrand as="li" className="gap-3 max-w-fit">
-          <NextLink className="flex justify-start items-center gap-3 hover:scale-105 transition-transform duration-200" href="/">
+          <NextLink
+            className="flex justify-start items-center gap-3 hover:scale-105 transition-transform duration-200"
+            href="/"
+          >
             <div className="p-2 bg-gradient-to-br from-violet-500 to-blue-500 rounded-xl shadow-lg">
               <Logo className="text-white" size={24} />
             </div>
@@ -78,13 +82,16 @@ export const Navbar = () => {
         justify="end"
       >
         <NavbarItem className="hidden sm:flex gap-4 items-center">
-          <Link 
-            isExternal 
-            aria-label="Github" 
+          <Link
+            isExternal
+            aria-label="Github"
             href={siteConfig.links.github}
             className="p-2 hover:bg-violet-100 dark:hover:bg-gray-700 rounded-xl transition-colors duration-200"
           >
-            <GithubIcon className="text-gray-600 dark:text-gray-400 hover:text-violet-600 transition-colors" size={20} />
+            <GithubIcon
+              size={20}
+              className="text-gray-600 dark:text-gray-400 hover:text-violet-600 transition-colors"
+            />
           </Link>
           <div className="p-1 hover:bg-violet-100 dark:hover:bg-gray-700 rounded-xl transition-colors duration-200">
             <ThemeSwitch />
@@ -94,13 +101,13 @@ export const Navbar = () => {
       </NavbarContent>
 
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
-        <Link 
-          isExternal 
-          aria-label="Github" 
+        <Link
+          isExternal
+          aria-label="Github"
           href={siteConfig.links.github}
           className="p-2 hover:bg-violet-100 dark:hover:bg-gray-700 rounded-xl transition-colors duration-200"
         >
-          <GithubIcon className="text-gray-600 dark:text-gray-400" size={20} />
+          <GithubIcon size={20} className="text-gray-600 dark:text-gray-400" />
         </Link>
         <div className="p-1 hover:bg-violet-100 dark:hover:bg-gray-700 rounded-xl transition-colors duration-200">
           <ThemeSwitch />
@@ -109,9 +116,7 @@ export const Navbar = () => {
       </NavbarContent>
 
       <NavbarMenu className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md">
-        <div className="mx-4 mt-4 mb-6">
-          {searchInput}
-        </div>
+        <div className="mx-4 mt-4 mb-6">{searchInput}</div>
         <div className="mx-4 flex flex-col gap-4">
           {siteConfig.navMenuItems.map((item, index) => (
             <NavbarMenuItem key={`${item}-${index}`}>
